@@ -3,9 +3,9 @@ from bin.app import app
 from tests.tools import assert_response
 
 def test_index():
-	# check that we get a 200 on the / URL
+	# check that we get a 303 on the / URL
 	resp = app.request("/")
-	assert_response(resp, status="200")
+	assert_response(resp, status="303")
 	
 	# test our first get request to /hello
 	resp = app.request("/hello_form_layout")
@@ -20,7 +20,8 @@ def test_index():
 	resp = app.request("/hello_form_layout", method="POST", data=data)
 	assert_response(resp, contains="Zed")
 	
-	# test game
-	resp = app.request("/game", method="POST", action="tell a joke")
-	assert_response(resp, contains="Laser Weapon Armory")
-	
+	# test gothonweb game
+	resp = app.request("/game")
+	assert_response(resp)
+	resp = app.request("/game", method="POST", action="shoot!")
+	assert_response(resp, status="303")

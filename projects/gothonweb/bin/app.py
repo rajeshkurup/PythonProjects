@@ -1,5 +1,5 @@
 import web
-from gothonweb.map import *
+from gothonweb import map
 
 urls = (
 	'/', 'Index',
