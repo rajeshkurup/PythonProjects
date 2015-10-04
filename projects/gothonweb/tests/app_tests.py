@@ -20,3 +20,7 @@ def test_index():
 	resp = app.request("/hello_form_layout", method="POST", data=data)
 	assert_response(resp, contains="Zed")
 	
+	# test game
+	resp = app.request("/game", method="POST", action="tell a joke")
+	assert_response(resp, contains="Laser Weapon Armory")
+	
