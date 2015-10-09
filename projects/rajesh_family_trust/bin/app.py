@@ -26,13 +26,13 @@ render = web.template.render('templates/')
 
 md = markdown.Markdown(output_format='html4')
 
-fmo = FamilyMemberOperator()
+fmo = FamilyMemberOperations()
 
 class Index(object):
 	def GET(self):
 		first_family_member = fmo.get_first_member()
 		if first_family_member:
-			session.selected_family_member = first_family_member.id
+			session.selected_family_member = first_family_member.get("id")
 		else:
 			session.selected_family_member = 0
 				
@@ -51,13 +51,13 @@ class FamilyMembers(object):
 	
 		if session.selected_family_member > 0:
 			family_members = fmo.get_all_members()
-			for family_member in family_members:	
-				html_content += '<br><input type="radio" name="member_name" value="%d"' % family_member.id
+			for family_member in family_members:
+				html_content += '<br><input type="radio" name="member_name" value="%d"' % family_member.get("id")
 			
-				if session.selected_family_member == family_member.id:
-					html_content += ' checked /> %s' % family_member.name
+				if session.selected_family_member == family_member.get("id"):
+					html_content += ' checked /> %s' % family_member.get("name")
 				else:
-					html_content += ' /> %s' % family_member.name
+					html_content += ' /> %s' % family_member.get("name")
 
 			html_content += '<br><br><input type="submit" name="btn_input" value="Home" />'
 			html_content += '<input type="submit" name="btn_input" value="View" />'
@@ -76,11 +76,11 @@ class FamilyMember(object):
 		
 		if family_member:
 			html_content += '<br><p><form action="/family_member_edit" method="POST">'
-			html_content += '<br><p>Name: %s </p>' % family_member.name
-			html_content += '<br><p>Age: %s </p>' % family_member.age
-			html_content += '<br><p>Gender: %s </p>' % family_member.gender
-			html_content += '<br><p>Job: %s </p>' % family_member.job
-			html_content += '<br><p>Office: %s </p>' % family_member.office
+			html_content += '<br><p>Name: %s </p>' % family_member.get("name")
+			html_content += '<br><p>Age: %s </p>' % family_member.get("age")
+			html_content += '<br><p>Gender: %s </p>' % family_member.get("gender")
+			html_content += '<br><p>Job: %s </p>' % family_member.get("job")
+			html_content += '<br><p>Office: %s </p>' % family_member.get("office")
 			html_content += '<br><input type="submit" name="btn_edit" value="Edit" />'
 			html_content += '<input type="submit" name="btn_family_members" value="Family Members" />'
 			html_content += '<input type="submit" name="btn_home" value="Home" /></form></p>'
@@ -107,7 +107,7 @@ class FamilyMember(object):
 			family_member = fmo.delete_member(id=session.selected_family_member)
 
 			if family_member:
-				session.selected_family_member = family_member.id
+				session.selected_family_member = family_member.get("id")
 			else:
 				session.selected_family_member = 0
 	
@@ -127,11 +127,11 @@ class FamilyMemberEdit(object):
 		
 		if family_member:
 			html_content += '<br><p><form action="/family_member_submit" method="POST">'
-			html_content += '<br><p>Name: <input type="text" name="name" value="%s" /></p>' % family_member.name
-			html_content += '<br><p>Age: <input type="text" name="age" value="%s" /></p>' % family_member.age
-			html_content += '<br><p>Gender: <input type="text" name="gender" value="%s" /></p>' % family_member.gender
-			html_content += '<br><p>Job: <input type="text" name="job" value="%s" /></p>' % family_member.job
-			html_content += '<br><p>Office: <input type="text" name="office" value="%s" /></p>' % family_member.office
+			html_content += '<br><p>Name: <input type="text" name="name" value="%s" /></p>' % family_member.get("name")
+			html_content += '<br><p>Age: <input type="text" name="age" value="%s" /></p>' % family_member.get("age")
+			html_content += '<br><p>Gender: <input type="text" name="gender" value="%s" /></p>' % family_member.get("gender")
+			html_content += '<br><p>Job: <input type="text" name="job" value="%s" /></p>' % family_member.get("job")
+			html_content += '<br><p>Office: <input type="text" name="office" value="%s" /></p>' % family_member.get("office")
 			html_content += '<br><input type="submit" name="btn_submit" value="Submit" />'
 			html_content += '<input type="submit" name="btn_reset" value="Reset" />'
 			html_content += '<input type="submit" name="btn_cancel" value="Cancel" /></form></p>'
@@ -157,13 +157,12 @@ class FamilyMemberSubmit(object):
 	def POST(self):
 		form = web.input(btn_submit=None, btn_reset=None, btn_cancel=None, name=None, age=None, gender=None, job=None, office=None)
 		if form.btn_submit:
-			family_member = FamilyMember()
-			family_member.id = session.selected_family_member
-			family_member.name = form.name
-			family_member.age = form.age
-			family_member.gender = form.gender
-			family_member.job = form.job
-			family_member.office = form.office
+			family_member = {"id": session.selected_family_member,
+								"name": form.name,
+								"age": form.age,
+								"gender": form.gender,
+								"job": form.job,
+								"office": form.office}
 			fmo.update_member(family_member=family_member)
 			web.seeother("/family_member")
 			
@@ -196,16 +195,16 @@ class FamilyMemberCreate(object):
 	def POST(self):
 		form = web.input(btn_add=None, btn_reset=None, btn_cancel=None, name=None, age=None, gender=None, job=None, office=None)
 		if form.btn_add:
-			family_member = FamilyMember()
-			family_member.name = form.name
-			family_member.age = form.age
-			family_member.gender = form.gender
-			family_member.job = form.job
-			family_member.office = form.office
+			family_member = {"id": 0,
+								"name": form.name,
+								"age": form.age,
+								"gender": form.gender,
+								"job": form.job,
+								"office": form.office}
 			family_member = fmo.add_member(family_member=family_member)
 			
 			if family_member:
-				session.selected_family_member = family_member.id
+				session.selected_family_member = family_member.get("id")
 			else:
 				session.selected_family_member = 0
 				
