@@ -11,14 +11,11 @@ class FamilyMemberOperations(object):
 		pass
 
 	def add_member(self, family_member=None):
+		new_member_id = rajesh_family_trust.family_members.count() + 1
+		
 		if family_member:
-			new_member_id = rajesh_family_trust.family_members.count() + 1
-			rajesh_family_trust.family_members.insert({"id": new_member_id, 
-														"name": family_member.get("name"),
-														"age": family_member.get("age"),
-														"gender": family_member.get("gender"),
-														"job": family_member.get("job"),
-														"office": family_member.get("office")})
+			family_member["id"] = new_member_id
+			rajesh_family_trust.family_members.insert(family_member)
 														
 		else:
 			return None
@@ -31,12 +28,7 @@ class FamilyMemberOperations(object):
 	
 	def update_member(self, family_member=None):
 		if family_member:
-			rajesh_family_trust.family_members.update({"id": family_member.get("id")}, {"id": family_member.get("id"), 
-																						"name": family_member.get("name"),
-																						"age": family_member.get("age"),
-																						"gender": family_member.get("gender"),
-																						"job": family_member.get("job"),
-																						"office": family_member.get("office")})
+			rajesh_family_trust.family_members.update({"id": family_member.get("id")}, family_member)
 			return self.get_member(id=family_member.get("id"))
 				
 		else:
@@ -58,16 +50,8 @@ class FamilyMemberOperations(object):
 
 	def get_all_members(self):
 		family_members = []
+
 		for family_member in rajesh_family_trust.family_members.find():
-			if family_member:
-				family_members.append({"id": family_member.get("id"),
-										"name": family_member.get("name"),
-										"age": family_member.get("age"),
-										"gender": family_member.get("gender"),
-										"job": family_member.get("job"),
-										"office": family_member.get("office")})
-										
-			else:
-				continue
+			family_members.append(family_member)
 			
 		return family_members
