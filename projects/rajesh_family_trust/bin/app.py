@@ -81,9 +81,24 @@ class FamilyMember(object):
 			html_content += '<br><p>Gender: %s </p>' % family_member.get("gender")
 			html_content += '<br><p>Job: %s </p>' % family_member.get("job")
 			html_content += '<br><p>Office: %s </p>' % family_member.get("office")
-			html_content += '<br><input type="submit" name="btn_edit" value="Edit" />'
-			html_content += '<input type="submit" name="btn_family_members" value="Family Members" />'
-			html_content += '<input type="submit" name="btn_home" value="Home" /></form></p>'
+	
+			father_name = "Not Selected"
+			father_id = family_member.get("father")
+			if father_id != 0:
+				father_name = fmo.get_member(id=father_id).get("name")
+	
+			html_content += '<br><p>Father: %s </p>' % father_name
+			
+			mother_name = "Not Selected"
+			mother_id = family_member.get("mother")
+			if mother_id != 0:
+				mother_name = fmo.get_member(id=mother_id).get("name")
+			
+			html_content += '<br><p>Mother: %s </p>' % mother_name
+			
+			html_content += '<br><input type="submit" name="btn_input" value="Edit" />'
+			html_content += '<input type="submit" name="btn_input" value="Family Members" />'
+			html_content += '<input type="submit" name="btn_input" value="Home" /></form></p>'
 			
 		content = md.convert(html_content)
 		return render.layout(content=content)
@@ -132,22 +147,37 @@ class FamilyMemberEdit(object):
 			html_content += '<br><p>Gender: <input type="text" name="gender" value="%s" /></p>' % family_member.get("gender")
 			html_content += '<br><p>Job: <input type="text" name="job" value="%s" /></p>' % family_member.get("job")
 			html_content += '<br><p>Office: <input type="text" name="office" value="%s" /></p>' % family_member.get("office")
-			html_content += '<br><input type="submit" name="btn_submit" value="Submit" />'
-			html_content += '<input type="submit" name="btn_reset" value="Reset" />'
-			html_content += '<input type="submit" name="btn_cancel" value="Cancel" /></form></p>'
+			
+			html_content += '<br><p>Father: <select name="father">'
+			html_content += '<option value="0">Select</option>'
+			male_members = fmo.get_members(query={"gender": "Male", "id": {"$ne": session.selected_family_member}})
+		
+			for father in male_members:
+				html_content += '<option value="%d">%s</option>' % (father.get("id"), father.get("name"))
+			
+			html_content += '</select><br><p>Mother: <select name="mother">'
+			html_content += '<option value="0">Select</option>'
+			female_members = fmo.get_members(query={"gender": "Female", "id": {"$ne": session.selected_family_member}})
+		
+			for mother in female_members:
+				html_content += '<option value="%d">%s</option>' % (mother.get("id"), mother.get("name"))
+			
+			html_content += '</select><br><input type="submit" name="btn_input" value="Submit" />'
+			html_content += '<input type="submit" name="btn_input" value="Reset" />'
+			html_content += '<input type="submit" name="btn_input" value="Cancel" /></form></p>'
 		
 		content = md.convert(html_content)
 		return render.layout(content=content)
 	
 	def POST(self):
-		form = web.input(btn_edit=None, btn_family_members=None, btn_home=None)
-		if form.btn_edit:
+		form = web.input(btn_input=None)
+		if form.btn_input == "Edit":
 			web.seeother("/family_member_edit")
 			
-		elif form.btn_family_members:
+		elif form.btn_input == "Family Members":
 			web.seeother("/family_members")
 			
-		elif form.btn_home:
+		elif form.btn_input == "Home":
 			web.seeother("/")
 			
 		else:
@@ -155,21 +185,23 @@ class FamilyMemberEdit(object):
 		
 class FamilyMemberSubmit(object):
 	def POST(self):
-		form = web.input(btn_submit=None, btn_reset=None, btn_cancel=None, name=None, age=None, gender=None, job=None, office=None)
-		if form.btn_submit:
+		form = web.input(btn_input=None, name=None, age=None, gender=None, job=None, office=None)
+		if form.btn_input == "Submit":
 			family_member = {"id": session.selected_family_member,
 								"name": form.name,
 								"age": form.age,
 								"gender": form.gender,
 								"job": form.job,
-								"office": form.office}
+								"office": form.office,
+								"father": int(form.father),
+								"mother": int(form.mother)}
 			fmo.update_member(family_member=family_member)
 			web.seeother("/family_member")
 			
-		elif form.btn_reset:
+		elif form.btn_input == "Reset":
 			web.seeother("/family_member_edit")
 		
-		elif form.btn_cancel:
+		elif form.btn_input == "Cancel":
 			web.seeother("/family_member")
 		
 		else:
@@ -185,22 +217,40 @@ class FamilyMemberAdd(object):
 		html_content += '<br><p>Gender: <input type="text" name="gender" value="" /></p>'
 		html_content += '<br><p>Job: <input type="text" name="job" value="" /></p>'
 		html_content += '<br><p>Office: <input type="text" name="office" value="" /></p>'
-		html_content += '<br><input type="submit" name="btn_add" value="Add" />'
-		html_content += '<input type="submit" name="btn_reset" value="Reset" />'
-		html_content += '<input type="submit" name="btn_cancel" value="Cancel" /></form></p>'
+		
+		html_content += '<br><p>Father: <select name="father">'
+		html_content += '<option value="0">Select</option>'
+		male_members = fmo.get_members(query={"gender": "Male"})
+		
+		for father in male_members:
+			html_content += '<option value="%d">%s</option>' % (father.get("id"), father.get("name"))
+			
+		html_content += '</select><br><p>Mother: <select name="mother">'
+		html_content += '<option value="0">Select</option>'
+		female_members = fmo.get_members(query={"gender": "Female"})
+		
+		for mother in female_members:
+			html_content += '<option value="%d">%s</option>' % (mother.get("id"), mother.get("name"))
+		
+		html_content += '</select><br><input type="submit" name="btn_input" value="Add" />'
+		html_content += '<input type="submit" name="btn_input" value="Reset" />'
+		html_content += '<input type="submit" name="btn_input" value="Cancel" /></form></p>'
 		content = md.convert(html_content)
 		return render.layout(content=content)
 
 class FamilyMemberCreate(object):
 	def POST(self):
-		form = web.input(btn_add=None, btn_reset=None, btn_cancel=None, name=None, age=None, gender=None, job=None, office=None)
-		if form.btn_add:
+		form = web.input(btn_input=None, name=None, age=None, gender=None, job=None, office=None, father=None, mother=None)
+		if form.btn_input == "Add":
 			family_member = {"id": 0,
 								"name": form.name,
 								"age": form.age,
 								"gender": form.gender,
 								"job": form.job,
-								"office": form.office}
+								"office": form.office,
+								"father": int(form.father),
+								"mother": int(form.mother)}
+								
 			family_member = fmo.add_member(family_member=family_member)
 			
 			if family_member:
@@ -210,10 +260,10 @@ class FamilyMemberCreate(object):
 				
 			web.seeother("/family_members")
 			
-		elif form.btn_reset:
+		elif form.btn_input == "Reset":
 			web.seeother("/family_member_add")
 		
-		elif form.btn_cancel:
+		elif form.btn_input == "Cancel":
 			web.seeother("/family_members")
 		
 		else:

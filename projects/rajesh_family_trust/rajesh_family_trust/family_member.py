@@ -55,3 +55,12 @@ class FamilyMemberOperations(object):
 			family_members.append(family_member)
 			
 		return family_members
+
+	def get_members(self, query=None):
+		family_members = []
+
+		for family_member in rajesh_family_trust.family_members.find(query):
+			family_members.append(family_member)
+			
+		return family_members
+		
