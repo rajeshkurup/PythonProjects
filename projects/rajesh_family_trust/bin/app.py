@@ -1,10 +1,6 @@
 import web
 import markdown
-import json
-import pymongo
 from rajesh_family_trust.family_member import *
-from bson import json_util
-from pymongo import MongoClient
 
 urls = (
 	'/', 'Index',
@@ -30,13 +26,13 @@ render = web.template.render('templates/')
 
 md = markdown.Markdown(output_format='html4')
 
-mongo_client = MongoClient('mongodb://localhost:27017/')
-mongo_db_rft = mongo_client.rajesh_family_trust
+fmo = FamilyMemberOperator()
 
 class Index(object):
 	def GET(self):
-		if mongo_db_rft.family_members.count() > 0:
-			session.selected_family_member = mongo_db_rft.family_members.find().next().get("id")
+		first_family_member = fmo.get_first_member()
+		if first_family_member:
+			session.selected_family_member = first_family_member.id
 		else:
 			session.selected_family_member = 0
 				
@@ -53,14 +49,15 @@ class FamilyMembers(object):
 		
 		html_content += '<br><p><form action="/family_member" method="POST">'
 	
-		if session.selected_family_member > 0:	
-			for family_member in mongo_db_rft.family_members.find():	
-				html_content += '<br><input type="radio" name="member_name" value="%d"' % family_member.get("id")
+		if session.selected_family_member > 0:
+			family_members = fmo.get_all_members()
+			for family_member in family_members:	
+				html_content += '<br><input type="radio" name="member_name" value="%d"' % family_member.id
 			
-				if session.selected_family_member == family_member.get("id"):
-					html_content += ' checked /> %s' % family_member.get("name")
+				if session.selected_family_member == family_member.id:
+					html_content += ' checked /> %s' % family_member.name
 				else:
-					html_content += ' /> %s' % family_member.get("name")
+					html_content += ' /> %s' % family_member.name
 
 			html_content += '<br><br><input type="submit" name="btn_input" value="Home" />'
 			html_content += '<input type="submit" name="btn_input" value="View" />'
@@ -73,18 +70,21 @@ class FamilyMembers(object):
 		
 class FamilyMember(object):
 	def GET(self):
-		family_member = mongo_db_rft.family_members.find({"id" : session.selected_family_member}).next()
 		html_content = '<h1>Family Member</h1>'
 		html_content += '<br><p>Details of Family Member</p>'
-		html_content += '<br><p><form action="/family_member_edit" method="POST">'
-		html_content += '<br><p>Name: %s </p>' % family_member.get("name")
-		html_content += '<br><p>Age: %s </p>' % family_member.get("age")
-		html_content += '<br><p>Gender: %s </p>' % family_member.get("gender")
-		html_content += '<br><p>Job: %s </p>' % family_member.get("job")
-		html_content += '<br><p>Office: %s </p>' % family_member.get("office")
-		html_content += '<br><input type="submit" name="btn_edit" value="Edit" />'
-		html_content += '<input type="submit" name="btn_family_members" value="Family Members" />'
-		html_content += '<input type="submit" name="btn_home" value="Home" /></form></p>'
+		family_member = fmo.get_member(id=session.selected_family_member)
+		
+		if family_member:
+			html_content += '<br><p><form action="/family_member_edit" method="POST">'
+			html_content += '<br><p>Name: %s </p>' % family_member.name
+			html_content += '<br><p>Age: %s </p>' % family_member.age
+			html_content += '<br><p>Gender: %s </p>' % family_member.gender
+			html_content += '<br><p>Job: %s </p>' % family_member.job
+			html_content += '<br><p>Office: %s </p>' % family_member.office
+			html_content += '<br><input type="submit" name="btn_edit" value="Edit" />'
+			html_content += '<input type="submit" name="btn_family_members" value="Family Members" />'
+			html_content += '<input type="submit" name="btn_home" value="Home" /></form></p>'
+			
 		content = md.convert(html_content)
 		return render.layout(content=content)
 
@@ -104,10 +104,10 @@ class FamilyMember(object):
 			web.seeother("/family_member_add")
 
 		elif form.btn_input == "Delete":
-			mongo_db_rft.family_members.remove({"id" : session.selected_family_member})
-			
-			if mongo_db_rft.family_members.count() > 0:
-				session.selected_family_member = mongo_db_rft.family_members.find().next().get("id")
+			family_member = fmo.delete_member(id=session.selected_family_member)
+
+			if family_member:
+				session.selected_family_member = family_member.id
 			else:
 				session.selected_family_member = 0
 	
@@ -121,18 +121,21 @@ class FamilyMember(object):
 		
 class FamilyMemberEdit(object):
 	def GET(self):
-		family_member = mongo_db_rft.family_members.find({"id" : session.selected_family_member}).next()
 		html_content = '<h1>Edit Family Member</h1>'
 		html_content += '<br><p>Edit the Details of Family Member</p>'
-		html_content += '<br><p><form action="/family_member_submit" method="POST">'
-		html_content += '<br><p>Name: <input type="text" name="name" value="%s" /></p>' % family_member.get("name")
-		html_content += '<br><p>Age: <input type="text" name="age" value="%s" /></p>' % family_member.get("age")
-		html_content += '<br><p>Gender: <input type="text" name="gender" value="%s" /></p>' % family_member.get("gender")
-		html_content += '<br><p>Job: <input type="text" name="job" value="%s" /></p>' % family_member.get("job")
-		html_content += '<br><p>Office: <input type="text" name="office" value="%s" /></p>' % family_member.get("office")
-		html_content += '<br><input type="submit" name="btn_submit" value="Submit" />'
-		html_content += '<input type="submit" name="btn_reset" value="Reset" />'
-		html_content += '<input type="submit" name="btn_cancel" value="Cancel" /></form></p>'
+		family_member = fmo.get_member(id=session.selected_family_member)
+		
+		if family_member:
+			html_content += '<br><p><form action="/family_member_submit" method="POST">'
+			html_content += '<br><p>Name: <input type="text" name="name" value="%s" /></p>' % family_member.name
+			html_content += '<br><p>Age: <input type="text" name="age" value="%s" /></p>' % family_member.age
+			html_content += '<br><p>Gender: <input type="text" name="gender" value="%s" /></p>' % family_member.gender
+			html_content += '<br><p>Job: <input type="text" name="job" value="%s" /></p>' % family_member.job
+			html_content += '<br><p>Office: <input type="text" name="office" value="%s" /></p>' % family_member.office
+			html_content += '<br><input type="submit" name="btn_submit" value="Submit" />'
+			html_content += '<input type="submit" name="btn_reset" value="Reset" />'
+			html_content += '<input type="submit" name="btn_cancel" value="Cancel" /></form></p>'
+		
 		content = md.convert(html_content)
 		return render.layout(content=content)
 	
@@ -154,14 +157,14 @@ class FamilyMemberSubmit(object):
 	def POST(self):
 		form = web.input(btn_submit=None, btn_reset=None, btn_cancel=None, name=None, age=None, gender=None, job=None, office=None)
 		if form.btn_submit:
-			mongo_db_rft.family_members.update({"id" : session.selected_family_member}, 
-												{"id" : session.selected_family_member, 
-												"name" : form.name,
-												"age" : form.age,
-												"gender" : form.gender,
-												"job" : form.job,
-												"office" : form.office})
-
+			family_member = FamilyMember()
+			family_member.id = session.selected_family_member
+			family_member.name = form.name
+			family_member.age = form.age
+			family_member.gender = form.gender
+			family_member.job = form.job
+			family_member.office = form.office
+			fmo.update_member(family_member=family_member)
 			web.seeother("/family_member")
 			
 		elif form.btn_reset:
@@ -193,15 +196,19 @@ class FamilyMemberCreate(object):
 	def POST(self):
 		form = web.input(btn_add=None, btn_reset=None, btn_cancel=None, name=None, age=None, gender=None, job=None, office=None)
 		if form.btn_add:
-			new_member_id = mongo_db_rft.family_members.count() + 1
-			mongo_db_rft.family_members.insert({"id" : new_member_id, 
-												"name" : form.name,
-												"age" : form.age,
-												"gender" : form.gender,
-												"job" : form.job,
-												"office" : form.office})
+			family_member = FamilyMember()
+			family_member.name = form.name
+			family_member.age = form.age
+			family_member.gender = form.gender
+			family_member.job = form.job
+			family_member.office = form.office
+			family_member = fmo.add_member(family_member=family_member)
 			
-			session.selected_family_member = new_member_id
+			if family_member:
+				session.selected_family_member = family_member.id
+			else:
+				session.selected_family_member = 0
+				
 			web.seeother("/family_members")
 			
 		elif form.btn_reset:
